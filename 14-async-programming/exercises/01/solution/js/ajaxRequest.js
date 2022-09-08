@@ -1,4 +1,4 @@
-import { state, actions } from './store/ajaxRequest.js';
+import { state, actions } from "./store/ajaxRequest.js";
 
 /**
  * Represents a request factory
@@ -13,9 +13,10 @@ import { state, actions } from './store/ajaxRequest.js';
 function ajaxRequest({
   url,
   successCallback,
-  method = 'GET',
+  method = "GET",
   delay = 5000,
   maxRetry = 2,
+  retryCount = 3,
 } = {}) {
   actions.initRequest(maxRetry, delay);
 
@@ -24,7 +25,7 @@ function ajaxRequest({
    * @param {string} message - the error message
    */
   function handleError(message) {
-
+    console.error(`Error: ${message}`);
   }
 
   /**
@@ -32,14 +33,29 @@ function ajaxRequest({
    * @param {Object} xhr - the error message
    */
   function handleLoad(xhr) {
-
+    console.log(("Loaded", xhr));
+    successCallback(xhr.response);
   }
 
   /**
    * Send ajax request
    */
   function request() {
-
+    const xhr = new XMLHttpRequest();
+    xhr.open(method, url);
+    xhr.onload = handleLoad;
+    xhr.onerror = (ev) => {
+      retryCount -= 1;
+      if (retryCount === 0) {
+        handleError(`Resource not available: ${url}`);
+      } else {
+        const to = setTimeout(() => {
+          clearTimeout(to);
+          request();
+        }, delay);
+      }
+    };
+    xhr.send();
   }
 
   return request;
